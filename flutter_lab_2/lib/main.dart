@@ -34,6 +34,16 @@ class CampusStudent {
     }
     _trainingScore = value;
   }
+
+  String evaluateHonorRoll() {
+    if (gpa >= 3.6 && _trainingScore >= 90) {
+      return "Sinh viên Xuất sắc toàn diện";
+    } else if (gpa >= 3.2 && _trainingScore >= 80) {
+      return "Sinh viên Giỏi";
+    } else {
+      return "Sinh viên Đạt chuẩn";
+    }
+  }
 }
 
 class Lab02ProfileApp extends StatelessWidget {
@@ -164,7 +174,7 @@ class _CampusProfileScreenState extends State<CampusProfileScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              "Xếp loại sinh viên",
+                              student.evaluateHonorRoll(),
                               style: TextStyle(
                                 color: Colors.amber.shade900,
                                 fontWeight: FontWeight.bold,
