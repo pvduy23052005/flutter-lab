@@ -73,6 +73,7 @@ class FlutterLab3 extends StatelessWidget {
                 department: "CNTT",
                 credits: 3,
                 buttonColor: Colors.green,
+                isPrerequisite: true,
                 onTap: () => _handleClick(context),
               ),
             ],

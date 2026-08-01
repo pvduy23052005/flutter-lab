@@ -7,6 +7,7 @@ class CourseCard extends StatelessWidget {
   final int credits;
   final VoidCallback onTap;
   final Color buttonColor;
+  final bool isPrerequisite;
 
   const CourseCard({
     super.key,
@@ -16,6 +17,7 @@ class CourseCard extends StatelessWidget {
     required this.credits,
     required this.onTap,
     required this.buttonColor,
+    this.isPrerequisite = false,
   });
 
   @override
@@ -39,17 +41,30 @@ class CourseCard extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
+                  spacing: 3,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      courseCode,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: buttonColor,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      spacing: 8,
+                      children: [
+                        Text(
+                          courseCode,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: buttonColor,
+                          ),
+                        ),
+                        if (isPrerequisite) ...[
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 4),
                     Text(
                       title,
                       style: const TextStyle(
@@ -60,7 +75,6 @@ class CourseCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
                     Row(
                       children: [
                         Text(
@@ -71,7 +85,6 @@ class CourseCard extends StatelessWidget {
                             color: buttonColor,
                           ),
                         ),
-                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Đơn vị: Khoa $department',
