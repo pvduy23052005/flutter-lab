@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lab_3/ui/widget/course_card.dart';
+import 'package:flutter_lab_3/ui/widget/custom_card.dart';
 
 void main() {
   runApp(const MyApp());
@@ -45,6 +46,11 @@ class FlutterLab3 extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              TluVerifiedBadge(
+                title: "TLU VERIFIED COURSES CATELOG 2026",
+                description:
+                    "Danh sách học phần được đồng bộ từ hệ thống quản lý đào tạo",
+              ),
               CourseCard(
                 courseCode: "SE301",
                 title: "Kỹ thuật phần mềm",

@@ -2,48 +2,57 @@ import 'package:flutter/material.dart';
 
 class TluVerifiedBadge extends StatelessWidget {
   final String title;
+  final String description;
 
-  const TluVerifiedBadge({super.key, this.title = "Title badge"});
+  const TluVerifiedBadge({
+    super.key,
+    required this.title,
+    required this.description,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-
-        gradient : const LinearGradient(
-          colors: [Color(0xFF0052D4), Color(0xFF4364F7), Color(0xFF6FB1FC)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4364F7).withOpacity(0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ]
+        color: Colors.teal.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: Colors.teal, width: 0.8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
         children: [
-            const Icon(
-              Icons.verified,
-              color: Colors.white,
-              size: 18,
+          Row(
+            children: [
+              const Icon(
+                Icons.verified_user_rounded,
+                color: Colors.teal,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.teal,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 1.1,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: const TextStyle(
+              color: Colors.teal,
+              fontSize: 13,
+              overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(width: 19),
-            Text(
-              title,
-              style:TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-            )
-
-      ],),
+            maxLines: 1,
+          ),
+        ],
+      ),
     );
   }
 }
