@@ -54,7 +54,7 @@ class FlutterLab3 extends StatelessWidget {
               CourseCard(
                 courseCode: "SE301",
                 title: "Kỹ thuật phần mềm",
-                instructor: "Giảng viên: Nguyễn Văn A",
+                department: "CNTT",
                 credits: 3,
                 buttonColor: Colors.blue,
                 onTap: () => _handleClick(context),
@@ -62,7 +62,7 @@ class FlutterLab3 extends StatelessWidget {
               CourseCard(
                 courseCode: "SE302",
                 title: "Lập trình web",
-                instructor: "Giảng viên: Lê Văn B",
+                department: "CNTT",
                 credits: 3,
                 buttonColor: Colors.orange,
                 onTap: () => _handleClick(context),
@@ -70,7 +70,7 @@ class FlutterLab3 extends StatelessWidget {
               CourseCard(
                 courseCode: "SE303",
                 title: "Cấu trúc dữ liệu & giải thuật",
-                instructor: "Giảng viên: Trần Thị C",
+                department: "CNTT",
                 credits: 3,
                 buttonColor: Colors.green,
                 onTap: () => _handleClick(context),

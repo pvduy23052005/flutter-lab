@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class CourseCard extends StatelessWidget {
   final String courseCode;
   final String title;
-  final String instructor;
+  final String department;
   final int credits;
   final VoidCallback onTap;
   final Color buttonColor;
@@ -12,7 +12,7 @@ class CourseCard extends StatelessWidget {
     super.key,
     required this.courseCode,
     required this.title,
-    required this.instructor,
+    required this.department,
     required this.credits,
     required this.onTap,
     required this.buttonColor,
@@ -24,7 +24,7 @@ class CourseCard extends StatelessWidget {
       elevation: 3,
       margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
           topRight: Radius.circular(15),
           bottomRight: Radius.circular(15),
@@ -42,6 +42,15 @@ class CourseCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+                      courseCode,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: buttonColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
                       title,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
@@ -51,34 +60,30 @@ class CourseCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      instructor,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                     const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '$credits Tín chỉ',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange.shade800,
+                    Row(
+                      children: [
+                        Text(
+                          '$credits Tín chỉ - Bắt buộc',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: buttonColor,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Đơn vị: Khoa $department',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
