@@ -1,114 +1,145 @@
-# AssetTrack - Báo Cáo Phân Tích & Ứng Dụng Kỹ Thuật Quét Mã QR Thiết Bị Trong Flutter
+# AssetTrack - Báo Cáo Phân Tích & Ứng Dụng Kỹ Thuật Khai Thác Phần Cứng & Hạ Tầng Di Động Trong Flutter
 
-> **Tài liệu báo cáo thực hành & phân tích lý thuyết chuyên đề phần cứng di động:** Tập trung phân tích chuyên sâu tính năng **Quét mã QR Code bằng Camera (Machine Passport)** — tính năng phần cứng duy nhất được nhóm lựa chọn áp dụng thực tế trong dự án AssetTrack.  
+> **Tài liệu báo cáo thực hành & phân tích lý thuyết chuyên đề di động:** Phân tích chi tiết tính năng **Quét mã QR Code bằng Camera**, hạ tầng **Kết nối mạng (Wi-Fi, 4G/5G & Sync Offline)**, mô hình **Lưu trữ Bộ nhớ (Internal & External Storage)** và cơ chế **Thông báo Đẩy & Tác vụ Ngầm (Push Notifications & Background Work)** áp dụng thực tế trong dự án AssetTrack.  
 > **Thư mục lưu trữ:** `flutter/exercise-1/README.md`
 
 ---
 
-## 1. Bối Cảnh Thực Tế & Quyết Định Lựa Chọn Phần Cứng Của Nhóm
+## 1. Bối Cảnh Thực Tế & Quyết Định Triển Khai Phần Cứng Của Dự Án
 
-Trong dự án **AssetTrack** (Hệ thống Quản lý Lý lịch Thiết bị & Bảo trì Nhà máy), qua khảo sát bối cảnh vận hành thực tế tại phân xưởng sản xuất quy mô vừa & nhỏ (SME):
-* Thiết bị di động của công nhân vận hành (Operator) và kỹ sư bảo trì (ME Engineer) rất đa dạng (nhiều máy Android phổ thông / giá rẻ).
-* Nhóm quyết định **chỉ áp dụng duy nhất 1 tính năng khai thác phần cứng:** **Quét mã QR Code bằng Camera thiết bị di động** để tra cứu nhanh thông tin & Hộ chiếu thiết bị (Machine Passport).
-* Các phần cứng nâng cao khác (NFC, Microphone/Ghi âm, Cảm biến ánh sáng, Pedometer, Vân tay...) **không áp dụng** nhằm tối ưu chi phí triển khai, giảm độ phức tạp ứng dụng và đảm bảo $100\%$ thiết bị của nhân sự trong xưởng đều sử dụng được ngay.
+Trong hệ thống **AssetTrack** (Quản lý Lý lịch Thiết bị & Bảo trì Nhà máy SME):
+* Nhân sự vận hành (Operator) và bảo trì (ME Engineer) làm việc trong phân xưởng sản xuất có độ phủ Wi-Fi không đều, tín hiệu 4G/5G chập chờn ở một số khu vực gầm máy.
+* Thiết bị di động đa dạng (nhiều máy Android giá rẻ), nhân sự có thói quen **tắt ứng dụng (Killed / Terminated state)** khi không dùng để tiết kiệm pin.
 
----
-
-## 2. Ánh Xạ Lý Thuyết Chuyên Đề Vào Tính Năng Quét Mã QR Của Dự Án
-
-Mặc dù nhóm chỉ áp dụng tính năng Quét mã QR, tính năng này liên kết chặt chẽ và phản ánh đầy đủ các bài học cốt lõi từ 5 chuyên đề lý thuyết phần cứng:
-
-### 📸 1. Phân tích theo Chuyên đề Device Capability - Thiết bị không đồng nhất (LT 07/30)
-* **Tính phổ quát của phần cứng:** Camera là phần cứng tiêu chuẩn có mặt trên $100\%$ điện thoại thông minh hiện nay. Lựa chọn quét QR giúp ứng dụng chạy được trên mọi thiết bị mà không lo bị thiếu hụt phần cứng.
-* **Xử lý Quyền & Khả năng truy cập (Permission & Capability Check):**
-  * Ứng dụng kiểm tra và xin quyền `CAMERA` minh bạch trước khi mở màn hình quét.
-  * Nếu người dùng từ chối cấp quyền camera, ứng dụng hiển thị thông báo UX rõ ràng hướng dẫn truy cập Cài đặt hệ thống để bật quyền.
-* **Cơ chế Fallback (Xử lý khi camera không quét được):**
-  * Trong môi trường nhà xưởng, tem QR dán trên máy có thể bị mờ, dính dầu mỡ hoặc camera thiết bị bị hỏng/không lấy nét được.
-  * **Giải pháp Fallback:** Trên màn hình quét QR, nhóm thiết kế sẵn tùy chọn **"Nhập mã máy thủ công"** (ví dụ: gõ `MC-102`) hoặc **"Chọn máy từ danh sách phân xưởng"** để đảm bảo công việc không bị gián đoạn.
-
-### ⚡ 2. Phân tích theo Chuyên đề Hiệu năng, Pin & Quản lý Camera (LT 08/30)
-* **Thách thức:** Camera là một trong những tác vụ tốn PIN nhất và gây nóng máy nhanh nhất trên thiết bị di động do phải xử lý khung hình liên tục (frame streaming).
-* **Giải pháp quản lý vòng đời Camera trong Flutter (`mobile_scanner`):**
-  * **Tắt Camera ngay sau khi Decode:** Ngay khi camera nhận diện và decode thành công chuỗi ký tự mã máy (vd: `MC-102`), ứng dụng lập tức gọi hàm dừng `cameraController.stop()` hoặc `dispose()`.
-  * **Tối ưu tốc độ nhận diện (NFR-03):** Cấu hình độ phân giải camera ở mức tối ưu (`ResolutionPreset.medium`), giúp camera decode mã QR trong thời gian $< 1.5\text{ giây}$ mà không gây ngốn RAM hay giật lag UI.
-  * **Giải phóng tài nguyên:** Khi người dùng chuyển sang màn hình khác hoặc đóng app, Camera Controller được giải phóng hoàn toàn để tránh chạy ngầm gây hao pin.
-
-### 📶 3. Phân tích theo Chuyên đề NFC vs. QR Code (LT 23/30)
-* **So sánh kỹ thuật giữa QR Code và NFC:**
-  | Tiêu chí | Quét mã QR Code (Nhóm chọn) | Giao tiếp tầm ngắn NFC |
-  | :--- | :--- | :--- |
-  | **Phần cứng yêu cầu** | Camera (Phổ biến $100\%$) | Đầu đọc NFC Reader (Chỉ có ở máy tầm trung / cao cấp) |
-  | **Chi phí triển khai** | $0\text{ VNĐ}$ (In decal/giấy dán lên máy) | Phải mua thẻ NFC chip nhựa đúc ($15.000 - 30.000\text{đ}$/thẻ) |
-  | **Khoảng cách quét** | $5 - 100\text{ cm}$ (Bảo đảm an toàn khi máy đang chạy) | $0 - 4\text{ cm}$ (Phải áp sát điện thoại vào máy) |
-  | **Tốc độ decode** | $< 1.5\text{ giây}$ | $< 0.5\text{ giây}$ |
-  | **Khả năng thay thế** | Dễ dàng in lại mã mới khi bị mất/hỏng | Phải nạp lại dữ liệu NDEF vào thẻ mới |
-
-* **Lý do nhóm quyết định chọn QR Code:**
-  1. **Độ an toàn lao động:** Kỹ sư/Công nhân đứng cách máy $30 - 50\text{cm}$ vẫn quét được mã QR, không cần áp sát tay/điện thoại vào máy móc đang vận hành như NFC ($0 - 4\text{cm}$).
-  2. **Tiết kiệm chi phí:** In tem mã QR dán lên 50 máy trong phân xưởng với chi phí cực rẻ.
-  3. **Tương thích tuyệt đối:** 100% nhân sự trong xưởng đều dùng được ngay trên điện thoại cá nhân.
-
-### 🔇 4. Đánh giá các phần cứng KHÔNG áp dụng (LT 15/30, LT 16/30)
-* **Microphone / Ghi âm & Voice-to-Text (LT 16):** Môi trường nhà xưởng sản xuất có độ ồn cao (tiếng máy dập, máy nén khí), việc thu âm hoặc nhận dạng giọng nói dễ bị nhiễu sai lệch. Do đó nhóm dùng phím chọn form chuẩn thay vì microphone.
-* **Cảm biến môi trường / Pedometer (LT 15):** Điện thoại nhà xưởng không cần đếm bước chân hay đo áp suất khí quyển. Độ sáng màn hình được quản lý tự động bởi HĐH.
+**Danh mục phần cứng & hạ tầng di động nhóm lựa chọn áp dụng:**
+1. **Camera:** Quét mã QR Code tra cứu thông tin máy (Machine Passport - US-01).
+2. **Kết nối Mạng & Đồng bộ Offline (Wi-Fi, 4G/5G & SQLite Queue):** Đảm bảo app hoạt động mượt mà cả khi mất mạng và tự động đồng bộ khi online.
+3. **Mô hình Lưu trữ Bộ nhớ (Internal vs External Storage):** Quản lý SQLite DB, Cache, Token bảo mật và File xuất báo cáo QR/Downtime.
+4. **Thông báo Đẩy Ngầm (FCM Push Notifications & Background Work):** Nhận thông báo sự cố SOS tức thì ($< 3\text{s}$) ngay cả khi ứng dụng bị tắt hoàn toàn.
 
 ---
 
-## 3. Quy Trình Kỹ Thuật Quét Mã QR Hộ Chiếu Thiết Bị (Machine Passport Flow)
+## 2. Phân Tích Kỹ Thuật & Ánh Xạ Lý Thuyết Chuyên Đề
+
+### 📸 1. Camera & Quét Mã QR Code Thiết Bị (LT 07, LT 08, LT 23)
+* **Tính phổ quát & Tiết kiệm chi phí (LT 07 & LT 23):** Camera có mặt trên $100\%$ điện thoại. Sử dụng QR Code giúp tiết kiệm $100\%$ chi phí mua thẻ NFC, giữ khoảng cách an toàn $30-50\text{cm}$ cho nhân sự khi quét máy đang chạy.
+* **Tắt Camera ngay sau khi Decode (LT 08 - Tối ưu Pin & Nhiệt):** 
+  * Ngay khi `mobile_scanner` nhận diện thành công mã `MC-102`, ứng dụng gọi `cameraController.stop()` để **tắt camera ngay lập tức**, tránh gây nóng máy và hao pin.
+  * Tốc độ decode $< 1.5\text{ giây}$ (tuân thủ NFR-03).
+* **Cơ chế Fallback (LT 07):** Nếu tem QR bị mờ hoặc camera hỏng, ứng dụng tự động hiển thị tùy chọn **"Nhập mã máy thủ công"** (gõ `MC-102`) hoặc **"Chọn máy từ danh sách"**.
+
+---
+
+### 📶 2. Quản Lý Kết Nối Mạng (Wi-Fi, 4G/5G) & Tự Động Đồng Bộ Offline (NFR-06)
+
+```mermaid
+flowchart TD
+    A["Operator bấm Báo lỗi SOS / Nhập giờ máy chạy"] --> B{"Kiểm tra kết nối mạng (connectivity_plus)"}
+    
+    B -- "Có mạng (Wi-Fi hoặc 4G/5G)" --> C["Gửi trực tiếp lên Supabase DB"]
+    C --> D["Trigger FCM Push Notification tới ME"]
+    
+    B -- "Mất mạng (Offline / No Network)" --> E["Lưu phiếu vào SQLite Local Queue (Internal Storage)"]
+    E --> F["Hiển thị Banner đỏ: Đang offline - Phiếu sẽ đồng bộ khi có mạng"]
+    F --> G["Lắng nghe sự kiện Mạng online trở lại (Wi-Fi/4G/5G)"]
+    G --> H["Tự động đẩy Queue lên Supabase DB (Background Auto-Sync)"]
+    H --> D
+```
+
+* **Phát hiện trạng thái mạng Real-time (`connectivity_plus`):**
+  * Ứng dụng liên tục theo dõi sự thay đổi trạng thái kết nối mạng giữa **Wi-Fi**, **Mạng di động (4G/5G)** và **Mất mạng (None)**.
+* **Xử lý khi Mất mạng (Offline Mode):**
+  * Khi Operator nhập số giờ chạy hoặc gửi phiếu SOS khẩn cấp lúc không có mạng, dữ liệu được ghi ngay vào **SQLite Local Queue** dưới bộ nhớ trong.
+  * Giao diện xuất hiện **Banner cảnh báo đỏ (NFR-06):** *"⚠️ Không có mạng — Phiếu SOS sẽ được lưu tạm và tự động gửi tới kỹ sư sau khi kết nối Wi-Fi/4G trở lại."*
+* **Tự động Đồng bộ (Idempotent Auto-Sync):**
+  * Ngay khi thiết bị kết nối lại mạng Wi-Fi hoặc 4G/5G, ứng dụng tự động kích hoạt tiến trình đọc Queue và push dữ liệu lên Supabase.
+  * Mỗi bản ghi gắn 1 mã duy nhất `client_generated_id` (UUIDv4) để chống tạo trùng lặp dữ liệu khi sync lại nhiều lần.
+
+---
+
+### 💾 3. Mô Hình Lưu Trữ Bộ Nhớ: Internal Storage vs External Storage
+
+Ứng dụng phân chia lưu trữ minh bạch theo nguyên tắc quản lý bộ nhớ Android/iOS:
+
+```
+📱 BỘ NHỚ THIẾT BỊ DI ĐỘNG (STORAGE ARCHITECTURE)
+├── 🔒 Internal Storage (Bộ nhớ trong nội bộ App - Private)
+│   ├── SQLite Database (assettrack_offline.db) ──► Lưu Queue offline, Cache Machine Passport
+│   ├── FlutterSecureStorage / SharedPreferences ──► Lưu Auth Token, User Role (operator/me/supervisor)
+│   └── Temporary Cache Directory (path_provider) ──► Lưu ảnh chụp sự cố nén tạm trước khi upload
+│
+└── 📁 External Storage (Bộ nhớ ngoài / Public Directory)
+    ├── Downloads / AssetTrack_Exports/ ──────────► Lưu xuất file báo cáo Downtime (.pdf / .xlsx)
+    └── Machine_QR_Codes/ ───────────────────────► Lưu file ảnh QR Code exported để in ấn dán lên máy
+```
+
+#### A. Internal Storage (Bộ nhớ trong - Riêng tư của App)
+* **Vị trí & Thư viện:** Dùng `path_provider` (`getApplicationDocumentsDirectory()`) kết hợp SQLite (`sqflite`).
+* **Mục đích sử dụng:**
+  * **SQLite Database (`assettrack_offline.db`):** Lưu trữ hàng chờ (Offline Sync Queue) cho phiếu SOS, nhật ký giờ chạy máy và bản cache offline của 50 Hộ chiếu máy.
+  * **Secure Storage:** Lưu Auth Session Token, User ID và Vai trò (`operator`, `me_engineer`, `supervisor`).
+* **Đặc tính:** Bảo mật tuyệt đối, các ứng dụng khác không thể truy cập, không bị các app dọn rác (Clean Master) xóa nhầm, tự động giải phóng sạch sẽ khi gỡ ứng dụng.
+
+#### B. External Storage (Bộ nhớ ngoài / Dung lượng dùng chung)
+* **Vị trí & Thư viện:** Dùng `path_provider` (`getExternalStorageDirectory()`) kết hợp cấp quyền Android `READ/WRITE_EXTERNAL_STORAGE` (hoặc Scoped Storage trên Android 10+).
+* **Mục đích sử dụng:**
+  * **Xuất file Báo cáo Downtime (Supervisor):** Lưu các file báo cáo tổng hợp thời gian dừng máy phân xưởng dạng PDF/Excel vào thư mục `Downloads/AssetTrack/` để Quản đốc in hoặc gửi mail.
+  * **Xuất ảnh Mã QR Thiết bị:** Lưu file ảnh QR Code của máy móc ra bộ nhớ máy để mang đi in tem decal dán lên thân máy.
+* **Đặc tính:** Người dùng có thể xem, chia sẻ và sao chép file ra máy tính cá nhân dễ dàng qua ứng dụng Quản lý File (File Manager).
+
+---
+
+### 🔔 4. Thông Báo Đẩy & Tác Vụ Ngầm Khi Tắt Ứng Dụng (Push Notifications & Background Work)
+
+#### A. Gửi Push Notification Khẩn Cấp Khi App Bị Tắt (FCM Terminated/Background State - NFR-02, US-04)
+* **Bối cảnh:** Kỹ sư bảo trì (ME Engineer) không thể mở app 24/7. Họ thường xuyên thoát ứng dụng hoặc tắt hẳn app (Killed/Terminated State).
+* **Cơ chế hoạt động:**
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Operator / Kỹ sư ME
-    participant App as App Flutter Mobile
-    participant Cam as Camera (mobile_scanner)
-    participant DB as Supabase DB (Bảng machines)
+    actor Op as Operator (Công nhân)
+    participant Cloud as Supabase / FCM Server
+    participant OS as Hệ Điều Hành (Android System / iOS APNs)
+    actor ME as ME Engineer (App đã TẮT)
 
-    User->>App: Mở màn hình Quét mã QR
-    App->>App: Kiểm tra quyền CAMERA
-    alt Chưa có quyền Camera
-        App-->>User: Hiển thị dialog xin cấp quyền Camera
-    end
-    App->>Cam: Bật Camera Controller & Stream khung hình
-    Cam-->>User: Hiển thị khung ngắm Camera trên màn hình
-    
-    alt Quét thành công
-        Cam->>App: Decode thành công chuỗi mã máy ("MC-102")
-        App->>Cam: TẮT CAMERA NGAY LẬP TỨC (controller.stop())
-        App->>DB: Truy vấn SELECT * FROM machines WHERE code = 'MC-102'
-        DB-->>App: Trả về thông tin máy, chỉ số giờ chạy & lịch sử bảo trì
-        App-->>User: Hiển thị Màn hình Hộ chiếu thiết bị (Machine Passport)
-    else Mã QR mờ / Camera hỏng / Không quét được
-        User->>App: Nhấn nút "Nhập mã máy thủ công"
-        App-->>User: Mở dialog nhập text (vd: "MC-102")
-        User->>App: Nhập mã "MC-102" & nhấn Xác nhận
-        App->>DB: Truy vấn dữ liệu máy từ mã nhập
-        DB-->>App: Trả về thông tin máy
-        App-->>User: Hiển thị Màn hình Hộ chiếu thiết bị (Machine Passport)
-    end
+    Op->>Cloud: Gửi phiếu SOS sự cố khẩn cấp (MC-102)
+    Cloud->>Cloud: Trigger Cloud Function sinh High-Priority Payload
+    Cloud->>OS: Gửi Firebase Cloud Message (FCM Data Message)
+    Note over OS: HĐH nhận FCM ngay cả khi App AssetTrack đã bị TẮT hẳn
+    OS->>ME: Hiển thị Push Notification màu Đỏ + Âm thanh cảnh báo khẩn
+    ME->>OS: Nhấn vào Thông báo đẩy trên màn hình khóa
+    OS->>ME: Tự động khởi động App AssetTrack & mở thẳng màn hình SOS MC-102
 ```
 
----
+* **Cấu hình Kỹ thuật:**
+  1. Sử dụng **Firebase Cloud Messaging (FCM)** kết hợp `flutter_local_notifications`.
+  2. Đăng ký Handler ngầm tĩnh: `@pragma('vm:entry-point') Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message)`.
+  3. Cấu hình Channel Notification mức ưu tiên cao nhất (`Importance.max`, `Priority.high`) để phát âm thanh chuông báo động sự cố ngay cả khi thiết bị đang ở chế độ chờ (Sleep/Background) hoặc tắt ứng dụng.
+  4. **Giải quyết Race Condition (US-04):** Khi ME nhấn notification mở app, ứng dụng thực hiện Firestore/Supabase Transaction `UPDATE work_orders SET assignee_id = me_id WHERE status = 'pending'`. Nếu phiếu đã có kỹ sư khác nhận trước, app thông báo: *"Phiếu đã được tiếp nhận bởi kỹ sư khác"*.
 
-## 4. Bảng Tổng Hợp Chi Tiết Triển Khai Kỹ Thuật Tính Năng Quét QR
-
-| Hạng mục | Chi tiết kỹ thuật trong dự án AssetTrack |
-| :--- | :--- |
-| **Tên tính năng** | Quét mã QR Hộ chiếu Thiết bị (QR Machine Passport - US-01) |
-| **Đối tượng sử dụng** | Công nhân vận hành (Operator), Kỹ sư bảo trì (ME Engineer), Quản đốc (Supervisor) |
-| **Thư viện Flutter sử dụng** | `mobile_scanner: ^5.0.0` (dùng cho cả Android & iOS) |
-| **Độ phân giải Camera** | `ResolutionPreset.medium` (cân bằng giữa tốc độ decode và tiết kiệm pin) |
-| **Thời gian decode (NFR-03)** | $< 1.5\text{ giây}$ trong điều kiện ánh sáng nhà máy bình thường |
-| **Quản lý tài nguyên Pin/Nội năng** | Gọi `controller.stop()` ngay khi phát hiện mã QR đầu tiên; dispose controller khi unmount widget |
-| **Cơ chế Fallback (LT 07)** | Hỗ trợ nhập mã chuỗi (Text input: `MC-102`) hoặc chọn từ danh sách dropdown |
-| **Định dạng dữ liệu mã QR** | Chuỗi JSON hoặc Plain Text mã máy (ví dụ: `MC-102`, `MC-205`) |
+#### B. Tác Vụ Ngầm Đồng Bộ Dữ Liệu (Background Work & Offline Queue Recovery)
+* Khi ứng dụng khởi động lại hoặc chạy ngầm (dùng `workmanager` / `Connectivity` listener), tiến trình ngầm tự động quét lại SQLite Queue để đẩy các phiếu còn sót do mất mạng trước đó lên server mà không cần người dùng thao tác lại.
 
 ---
 
-## 5. Kết Luận
+## 3. Bảng Tổng Hợp Chi Tiết Triển Khai Kỹ Thuật
 
-Việc tập trung vào **Quét mã QR bằng Camera** là lựa chọn thiết thực, phù hợp nhất với nguồn lực và bối cảnh phân xưởng sản xuất SME. Mặc dù chỉ khai thác 1 tính năng phần cứng, giải pháp của nhóm vẫn đảm bảo áp dụng đúng các nguyên tắc kỹ thuật nâng cao:
-1. **Kiểm tra capability & Xử lý fallback mềm dẻo** (LT 07).
-2. **Tắt camera đúng lúc để bảo vệ Pin & Nhiệt độ thiết bị** (LT 08).
-3. **Đánh giá đúng ưu thế chi phí và khoảng cách an toàn của QR Code so với NFC** (LT 23).
+| Hạng mục Hạ tầng | Công nghệ / Package | Vai trò & Kịch bản thực tế trong AssetTrack |
+| :--- | :--- | :--- |
+| **Quét mã QR Máy** | `mobile_scanner: ^5.0.0` | Quét mã tra cứu Hộ chiếu thiết bị (US-01); tự ngắt camera giải phóng pin (LT 08); fallback nhập mã tay `MC-102` (LT 07). |
+| **Kiểm tra Mạng** | `connectivity_plus: ^6.0.0` | Lắng nghe real-time kết nối Wi-Fi, 4G/5G, Offline. Cảnh báo banner đỏ khi mất mạng (NFR-06). |
+| **Lưu trữ Nội bộ (Internal)** | `sqflite: ^2.3.0`<br>`path_provider: ^2.1.0`<br>`flutter_secure_storage` | Lưu SQLite Offline Queue, cache 50 máy xưởng, lưu Session Auth Token bảo mật tuyệt đối không bị dọn rác xóa. |
+| **Lưu trữ Bộ nhớ ngoài (External)** | `path_provider`<br>`permission_handler` | Lưu các file xuất báo cáo Downtime PDF/Excel, xuất ảnh QR Code máy ra thư mục `Downloads/` để in ấn dán máy. |
+| **Push Notification Ngầm** | `firebase_messaging: ^15.0.0`<br>`flutter_local_notifications` | Nhận thông báo sự cố SOS khẩn cấp trong $< 3\text{s}$ (NFR-02) kể cả khi app bị **TẮT HẲN** (Terminated state). |
+| **Tác vụ Ngầm (Background Work)** | `@pragma('vm:entry-point')` Background Handler | Tự động đọc SQLite queue và retry sync dữ liệu khi có kết nối mạng trở lại. |
+
+---
+
+## 4. Kết Luận
+
+Bản bổ sung đã hoàn thiện bức tranh hạ tầng kỹ thuật di động cho dự án **AssetTrack**:
+1. **Camera QR Code:** Tối ưu hiệu năng, tắt camera đúng lúc, fallback linh hoạt.
+2. **Wi-Fi & 4G/5G Sync:** Đảm bảo ứng dụng chạy xuyên suốt cả khi mất mạng nhờ SQLite Queue và cơ chế tự đồng bộ.
+3. **Internal vs External Storage:** Phân định rõ ràng nơi lưu dữ liệu bảo mật (SQLite/Auth Token) và nơi lưu file xuất ra ngoài (Báo cáo/Mã QR).
+4. **FCM Background Work:** Đảm bảo Kỹ sư bảo trì không bị bỏ lỡ thông báo sự cố khẩn cấp ngay cả khi đã tắt ứng dụng.
